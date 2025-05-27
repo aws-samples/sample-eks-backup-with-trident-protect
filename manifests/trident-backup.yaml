@@ -1,0 +1,8 @@
+apiVersion: protect.trident.netapp.io/v1
+kind: Backup
+metadata:
+  namespace: tenant0
+  name: sample-app-backup-1
+spec:
+  applicationRef: sample-app
+  appVaultRef: eks-protect-vault

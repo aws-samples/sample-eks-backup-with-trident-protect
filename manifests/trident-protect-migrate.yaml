@@ -1,0 +1,37 @@
+apiVersion: protect.trident.netapp.io/v1
+kind: BackupRestore
+metadata:
+  name: sample-app-migrate-1
+  namespace: tenant2
+spec:
+  appArchivePath: sample-app_93c72151-bc6d-4f5d-b312-cf013243b699/backups/sample-app-backup-1_1950bdb1-1227-4dc6-be39-d6b00a1256aa
+  appVaultRef: eks-protect-vault
+  namespaceMapping: 
+    - source: tenant0
+      destination: tenant2
+  resourceFilter:
+    resourceSelectionCriteria: "Exclude"
+    resourceMatchers:
+      - kind: StatefulSet
+        names: ["catalog-mysql"]
+      - kind: TargetGroupBinding
+---
+apiVersion: protect.trident.netapp.io/v1
+kind: BackupRestore
+metadata:
+  name: sample-app-migrate-2
+  namespace: tenant2
+spec:
+  appArchivePath: sample-app_93c72151-bc6d-4f5d-b312-cf013243b699/backups/sample-app-backup-1_1950bdb1-1227-4dc6-be39-d6b00a1256aa
+  appVaultRef: eks-protect-vault
+  namespaceMapping: 
+    - source: tenant0
+      destination: tenant2
+  storageClassMapping:
+    - destination: trident-csi-san
+      source: ebs-csi
+  resourceFilter:
+    resourceSelectionCriteria: "Include"
+    resourceMatchers:
+      - kind: StatefulSet
+        names: ["catalog-mysql"]
