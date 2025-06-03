@@ -1,7 +1,6 @@
 
 provider "aws" {
   region = var.aws_region
-  profile = "promise"
   default_tags {
     tags = local.tags
   }
