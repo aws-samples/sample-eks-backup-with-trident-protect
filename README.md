@@ -37,8 +37,8 @@ This application is built from microservices and backed by several stateful serv
 ### 1. Create required infrastructure
 Clone the sample repository from GitHub and create all relevant resources using the Terraform code in that repository:
 ```bash
-$ git clone https://github.com/aws-samples/<repo>
-$ cd <repo>/terraform
+$ git clone https://github.com/aws-samples/sample-eks-backup-with-trident-protect.git
+$ cd sample-eks-backup-with-trident-protect.git/terraform
 $ terraform init
 $ terraform apply -auto-approve
 ```
