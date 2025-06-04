@@ -4,7 +4,7 @@ metadata:
   name: sample-app-restore-1
   namespace: tenant1
 spec:
-  appArchivePath: sample-app_93c72151-bc6d-4f5d-b312-cf013243b699/backups/sample-app-backup-1_1950bdb1-1227-4dc6-be39-d6b00a1256aa
+  appArchivePath: <APP ARCHIVE PATH>   
   appVaultRef: eks-protect-vault
   namespaceMapping: 
     - source: tenant0

@@ -6,3 +6,4 @@ metadata:
 spec:
   applicationRef: sample-app
   appVaultRef: eks-protect-vault
+  reclaimPolicy: Delete
