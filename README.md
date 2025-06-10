@@ -114,7 +114,7 @@ kubectl create secret generic <secret-name> \
 ```
 
 ### 5. Create Trident Protect AppVault
-Next, we'll create the Trident Protect `AppVault`. The `AppVault` points to the S3 bucket where both snapshots and backup content, data and metadata is store. The `AppVault` will be created in the dedicated `trident-protect` backup namespace created in step 2 and can be further protected with [role-based access control (RBAC)](https://docs.netapp.com/us-en/trident/trident-protect/manage-authorization-access-control.html) to restrict access to privileged objects to administrators. 
+Next, we'll create the Trident Protect `AppVault`. The `AppVault` points to the S3 bucket where both snapshots and backup content, data and metadata is store. The `AppVault` will be created in the dedicated `trident-protect` backup namespace created in step 2 and can be secured with [role-based access control (RBAC)](https://docs.netapp.com/us-en/trident/trident-protect/manage-authorization-access-control.html) to restrict access to privileged objects to administrators. 
  
 All remaining tasks will be created either in the original application namespace or the target one in case of the restore examples.
 To create the `AppVault`, use the [protect-vault.yaml](./manifests/protect-vault.yaml) sample manifest. Update the following parameters:
