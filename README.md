@@ -2,14 +2,14 @@
 
 For customers running applications and workloads on Kubernetes, protecting resources and data from accidental deletion or hardware failures is crucial for maintaining business continuity and meeting compliance requirements. While Kubernetes provides high availability through its control plane and worker node redundancy, it does not inherently protect against human errors, such as accidental deletion of namespaces, deployments, or persistent volumes, nor does it safeguard against regional failures or data corruption. 
 
-The complexity of modern microservices architectures and the increasing scale of Kubernetes deployments make it even more critical to maintain regular, tested backups that can be restored consistently across different environments and regions. This includes backing up essential components such as entire namespaces, persistent volumes containing application data, custom resources, and configuration objects. Without proper backup mechanisms, organizations risk extended outages, data loss, and potential breach of service level agreements (SLAs), which can result in significant financial impact and damage to customer trust. This blog post will introduce a new data protection tool, and provide a step-by-step guide to implementing a proof-of-concept within a Kubernetes environment.
+The complexity of modern microservices architectures and the increasing scale of Kubernetes deployments make it even more critical to maintain regular, tested backups that can be restored consistently across different environments and regions. This includes backing up essential components such as entire namespaces, persistent volumes containing application data, custom resources, and configuration objects. Without proper backup mechanisms, organizations risk extended outages, data loss, and potential breach of service level agreements (SLAs), which can result in significant financial impact and damage to customer trust. This blog post will introduce a new data protection tool and provide a step-by-step guide to implementing a proof-of-concept within a Kubernetes environment.
 
 ### Trident Protect
-[NetApp Trident Protect](https://docs.netapp.com/us-en/trident/trident-protect/learn-about-trident-protect.html) is a new, free-to-use tool from NetApp that provides Kubernetes cluster data protection, data migration, disaster recovery, and movement of containerized workloads across public clouds (such as AWS) and on-premises environments. It enables on-demand or on-schedule data protection tasks for Kubernetes cluster resources and persistent volumes to externally supported storage backends like Amazon S3. It offers automation capabilities through its Kubernetes-native API and powerful `tridentctl-protect` CLI, enabling programmatic access for seamless integration with existing workflows. AWS users can leverge Trident Protect to handle operations like cross-cluster disaster recovery (between regions or within a region), migration of stateful services between storage services, or moving resources running on a self-managed Kubernetes cluster into [Amazon Elastic Kubernetes Service (Amazon EKS)](https://aws.amazon.com/pm/eks/). 
+[NetApp Trident Protect](https://docs.netapp.com/us-en/trident/trident-protect/learn-about-trident-protect.html) is a new, free-to-use tool from NetApp that provides Kubernetes cluster data protection, data migration, disaster recovery, and movement of containerized workloads across public clouds (such as AWS) and on-premises environments. It enables on-demand or on-schedule data protection tasks for Kubernetes cluster resources and persistent volumes to externally supported storage backends like Amazon S3. It offers automation capabilities through its Kubernetes-native API and powerful `tridentctl-protect` CLI, enabling programmatic access for seamless integration with existing workflows. AWS users can leverage Trident Protect to handle operations like cross-cluster disaster recovery (between regions or within a region), migration of stateful services between storage services, or moving resources running on a self-managed Kubernetes cluster into [Amazon Elastic Kubernetes Service (Amazon EKS)](https://aws.amazon.com/pm/eks/). 
 
 ![trident-protect](images/trident-protect.png)
 
-In this blog post, we will focus on using Trident Protect with our AWS retail sample store application to handle data protection and migration tasks running on an Amazon EKS cluster. We'll also deep-dive into some backup, recovery, and storage migration options that will help you decide what is best to implement in your organization's environment.  
+In this blog post, we will focus on using Trident Protect with our AWS retail sample store application to handle data protection and migration tasks running on an Amazon EKS cluster. We'll also dive deep into some backup, recovery, and storage migration options that will help you decide what is best to implement in your organization's environment.  
 
 The architecture below creates backups in our local region, which can be used to restore other namespaces within the same cluster and migrate from different AWS storage services. 
 
@@ -34,7 +34,7 @@ To manually provision the resources used in this walkthrough, the list below pro
 
 ## Setup walkthrough
 ### 1. Create required infrastructure with terraform
-Clone the sample repository from GitHub and create all relevant resources using the Terraform code in that repository:
+Clone the sample repository from GitHub and create all relevant resources using the Terraform code in the repository:
 ```bash
 $ git clone https://github.com/aws-samples/sample-eks-backup-with-trident-protect.git
 $ cd sample-eks-backup-with-trident-protect/terraform
@@ -103,7 +103,7 @@ aws s3 mb s3://<bucket_name> --region <aws_region>
 ```
 
 ### 4. Create EKS Secret to store user credentials
-Create a secret to store the trident protect user AWS accessKey and secretKey. If your account requires this, you can also use a sessionToken. You need to ensure that the user credentials you provide have the necessary permissions to access the bucket, see example [Amazon S3 policy statement](https://docs.netapp.com/us-en/trident/trident-protect/trident-protect-appvault-custom-resources.html#s3-compatible-storage-iam-permissions).
+Create a secret to store the trident protect user AWS accessKey and secretKey. You need to ensure that the user credentials you provide have the necessary permissions to access the bucket, see example [Amazon S3 policy statement](https://docs.netapp.com/us-en/trident/trident-protect/trident-protect-appvault-custom-resources.html#s3-compatible-storage-iam-permissions).
 
 Use the following example to create the secret:
 ```shell
@@ -191,7 +191,7 @@ NAME         PROTECTION STATE   AGE
 sample-app   None               14s
 ```
 
-## Backup, restore, and migrate walkthrough
+## Backup, restore, and migration walkthrough
 ### 1. Create Application Backup
 Trident Protect has several data protection options available:
 1. [On-Demand Snapshot](https://docs.netapp.com/us-en/trident/trident-protect/trident-protect-protect-apps.html#create-an-on-demand-snapshot)
@@ -285,7 +285,7 @@ If you need to select only specific resources within the application to restore,
     - `resourceMatchers[].namespaces`: Namespaces in the Kubernetes metadata.name field of the resource to be filtered
     - `resourceMatchers[].labelSelectors`: Label selector string in the Kubernetes metadata.name field of the resource
 
-As an example you could use this sample code to include resources in your `BackupRestore` manifest:  
+As an example, you could use this sample code to include resources in your `BackupRestore` manifest:  
 ```yaml
 spec:
   resourceFilter:
@@ -332,7 +332,7 @@ On this step, we'll migrate parts of our sample application stateful services fr
 
 We'll migrate the catalog service MySQL database from an EBS volume to an FSx for ONTAP block volume. 
 
-To do that, we'll execute two `BackupRestore` resources - one will recover all sample-application resources and data except for the `catalog-mysql` statefulset, and the other will recover and migrate the `catalog-mysql` statefulset from EBS to FSx for ONTAP block storage.. 
+To do that, we'll execute two `BackupRestore` resources - one will recover all sample-application resources and data except for the `catalog-mysql` statefulset, and the other will recover and migrate the `catalog-mysql` statefulset from EBS to FSx for ONTAP block storage. 
 Review the [trident-protect-migrate.yaml](./manifests/trident-protect-migrate.yaml). Notice we're using `resourceFilter` to exclude and include resources from the recovery process and `storageClassMapping` to migrate stateful resources to different storage backends. 
 
 ```yaml
@@ -405,7 +405,7 @@ To avoid unnecessary charges, make sure you delete all the resources created wit
 ```shell
 sh ../scripts/cleanup.sh
 ```
-If you created a new S3 bucket for this exercise, you can clean up by going to the AWS S3 console, [emptying](https://docs.aws.amazon.com/AmazonS3/latest/userguide/empty-bucket.html) the bucket, and [deleting](https://docs.aws.amazon.com/AmazonS3/latest/userguide/delete-bucket.html) it.
+If you created a new S3 bucket for this exercise, clean up by going to the AWS S3 console, [emptying](https://docs.aws.amazon.com/AmazonS3/latest/userguide/empty-bucket.html) the bucket, and [deleting](https://docs.aws.amazon.com/AmazonS3/latest/userguide/delete-bucket.html) it.
 
 ### Summary
 In conclusion, NetApp Trident Protect provides a powerful solution for simplifying data protection of Kubernetes environments. This approach addresses the critical need for comprehensive backup strategies in cloud-native architectures. By leveraging Trident Protect, users can efficiently create and manage backups of entire namespaces, persistent volumes, and other essential Amazon EKS resources, ensuring business continuity and compliance with data protection requirements.
