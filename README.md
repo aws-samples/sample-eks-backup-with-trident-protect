@@ -103,19 +103,22 @@ aws s3 mb s3://<bucket_name> --region <aws_region>
 ```
 
 ### 4. Create EKS Secret to store user credentials
-Create a secret to store the trident protect user AWS accessKey and secretKey. If your account requires this, you can also use a sessionToken.
+Create a secret to store the trident protect user AWS accessKey and secretKey. If your account requires this, you can also use a sessionToken. Refer to the [AWS IAM Identity Center documentation](https://docs.aws.amazon.com/singlesignon/latest/userguide/howtogetcredentials.html#how-to-get-temp-credentials-manual) if you need help with generating credentials.
 Use the following example to create the secret:
 ```shell
 kubectl create secret generic <secret-name> \
 --from-literal=accessKeyID=<accessKey> \
 --from-literal=secretAccessKey=<seceretKey> \
---from-literal=sessionToken=<sessionToken> \
 -n trident-protect
 ```
 
 ### 5. Create Trident Protect AppVault
 Next, we'll create the Trident Protect `AppVault`. The `AppVault` points to the S3 bucket where we'll store our backups. 
-To create the `AppVault`, use the [protect-vault.yaml](./manifests/protect-vault.yaml) sample manifest.
+To create the `AppVault`, use the [protect-vault.yaml](./manifests/protect-vault.yaml) sample manifest. Update the following parameters:
+- `providerConfig.s3.bucketName`: the S3 bucket name
+- `providerConfig.s3.endpoint`: the S3 endpoint if the bucket is not in the `us-east-1` region 
+- `providerCredentials.accessKeyID.name`: the EKS secret name from the previous step
+- `providerCredentials.secretAccessKey.name`: the EKS secret name from the previous step
 ```yaml
 ---
 apiVersion: protect.trident.netapp.io/v1
@@ -130,7 +133,7 @@ spec:
   providerConfig:
     s3:
       bucketName: trident-protect-src-bucket
-      endpoint: s3.example.com
+      endpoint: s3.amazonaws.com
   providerCredentials:
     accessKeyID:
       valueFromSecret:
@@ -139,10 +142,6 @@ spec:
     secretAccessKey:
       valueFromSecret:
         key: secretAccessKey
-        name: s3-secret
-    sessionToken:
-      valueFromSecret:
-        key: sessionToken
         name: s3-secret
 ```
 Run the following command to create the `AppVault`:
@@ -396,6 +395,7 @@ To avoid unnecessary charges, make sure you delete all resources by running the 
 ```shell
 sh ../scripts/cleanup.sh
 ```
+If you created a new S3 bucket for this exercise, you can clean up by going to the AWS S3 console, [emptying](https://docs.aws.amazon.com/AmazonS3/latest/userguide/empty-bucket.html) the bucket, and [deleting](https://docs.aws.amazon.com/AmazonS3/latest/userguide/delete-bucket.html) it.
 
 ### Summary
 In conclusion, the combination of NetApp Trident Protect and Amazon EKS provides a powerful solution for simplifying data protection in Kubernetes environments. This approach addresses the critical need for comprehensive backup strategies in cloud-native architectures. By leveraging Trident Protect, users can efficiently create and manage backups of entire namespaces, persistent volumes, and other essential Amazon EKS resources, ensuring business continuity and compliance with data protection requirements.
