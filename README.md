@@ -1,13 +1,15 @@
 # Backup and Disaster Recovery for Amazon EKS resources using NetApp Trident Protect
 
-For customers running applications and workloads on Kubernetes, protecting resources and data from accidental deletion or hardware failures is crucial for maintaining business continuity and meeting compliance requirements. While Kubernetes provides high availability through its control plane and worker node redundancy, it does not inherently protect against human errors, such as accidental deletion of namespaces, deployments, or persistent volumes, nor does it safeguard against regional failures or data corruption. 
+Kubernetes is an open-source container orchestration platform that automates the deployment, scaling, and management of containerized applications. For customers running applications and workloads on Kubernetes, protecting resources and data from accidental deletion or hardware failures is crucial for maintaining business continuity and meeting compliance requirements. While Kubernetes provides high availability through its control plane and worker node redundancy, it does not inherently protect against human errors, such as accidental deletion of namespaces, deployments, or persistent volumes, nor does it safeguard against regional failures or data corruption. 
 
 The complexity of modern microservices architectures and the increasing scale of Kubernetes deployments make it even more critical to maintain regular, tested backups that can be restored consistently across different environments and regions. This includes backing up essential components such as entire namespaces, persistent volumes containing application data, custom resources, and configuration objects. Without proper backup mechanisms, organizations risk extended outages, data loss, and potential breach of service level agreements (SLAs), which can result in significant financial impact and damage to customer trust. This blog post will introduce a new data protection tool and provide a step-by-step guide to implementing a proof-of-concept within a Kubernetes environment.
 
 ### Trident Protect
-[NetApp Trident Protect](https://docs.netapp.com/us-en/trident/trident-protect/learn-about-trident-protect.html) is a new, free-to-use tool from NetApp that provides Kubernetes cluster data protection, data migration, disaster recovery, and movement of containerized workloads across public clouds (such as AWS) and on-premises environments. It enables on-demand or on-schedule data protection tasks for Kubernetes cluster resources and persistent volumes to externally supported storage backends like Amazon S3. It offers automation capabilities through its Kubernetes-native API and powerful `tridentctl-protect` CLI, enabling programmatic access for seamless integration with existing workflows. AWS users can leverage Trident Protect to handle operations like cross-cluster disaster recovery (between regions or within a region), migration of stateful services between storage services, or moving resources running on a self-managed Kubernetes cluster into [Amazon Elastic Kubernetes Service (Amazon EKS)](https://aws.amazon.com/pm/eks/). 
+[NetApp Trident Protect](https://docs.netapp.com/us-en/trident/trident-protect/learn-about-trident-protect.html) is a no-license tool from NetApp that provides Kubernetes cluster data protection, data migration, disaster recovery, and movement of containerized workloads across regions and on-premises environments. It enables on-demand or on-schedule data protection tasks for Kubernetes cluster resources and persistent volumes to externally supported storage backends like Amazon S3. It offers automation capabilities through its Kubernetes-native API and powerful `tridentctl-protect` CLI, enabling programmatic access for seamless integration with existing workflows. AWS users can leverage Trident Protect to handle operations like cross-cluster disaster recovery (between regions or within a region), migration of stateful services between storage services, or moving resources running on a self-managed Kubernetes cluster into [Amazon Elastic Kubernetes Service (Amazon EKS)](https://aws.amazon.com/pm/eks/). 
 
 ![trident-protect](images/trident-protect.png)
+
+[Amazon FSx for NetApp ONTAP](https://aws.amazon.com/fsx/netapp-ontap/) (FSx for ONTAP) file system is a fully managed shared storage service, built on NetApp’s popular ONTAP file system. It provides users access to ONTAP’s enterprise storage features and services, such as thin provisioning, data deduplication, and the Snapshot functionality that drives NetApp’s agility in storage provisioning and data protection.
 
 In this blog post, we will focus on using Trident Protect with our AWS retail sample store application to handle data protection and migration tasks running on an Amazon EKS cluster. We'll also dive deep into some backup, recovery, and storage migration options that will help you decide what is best to implement in your organization's environment.  
 
@@ -117,7 +119,13 @@ kubectl create secret generic <secret-name> \
 Next, we'll create the Trident Protect `AppVault`. The `AppVault` points to the S3 bucket where both snapshots and backup content, data and metadata is store. The `AppVault` will be created in the dedicated `trident-protect` backup namespace created in step 2 and can be secured with [role-based access control (RBAC)](https://docs.netapp.com/us-en/trident/trident-protect/manage-authorization-access-control.html) to restrict access to privileged objects to administrators. 
  
 All remaining tasks will be created either in the original application namespace or the target one in case of the restore examples.
-To create the `AppVault`, use the [protect-vault.yaml](./manifests/protect-vault.yaml) sample manifest. Update the following parameters:
+To create the `AppVault`, use the [protect-vault.yaml](./manifests/protect-vault.yaml) sample manifest. 
+
+```shell
+cd <repo>/manifests
+```
+
+Update the following parameters:
 - `providerConfig.s3.bucketName`: the S3 bucket name
 - `providerConfig.s3.endpoint`: the S3 endpoint if the bucket is not in the `us-east-1` region 
 - `providerCredentials.accessKeyID.name`: the EKS secret name from the previous step
@@ -149,7 +157,7 @@ spec:
 ```
 Run the following command to create the `AppVault`:
 ```shell
-kubectl create -f ../manifests/protect-vault.yaml
+kubectl create -f protect-vault.yaml
 ```
 To check if the `AppVault` was created successfully run the following command:
 ```shell
@@ -181,7 +189,8 @@ spec:
 ```
 Run the following to create the `Application`:
 ```shell
-kubectl create -f ../manifests/trident-application.yaml
+cd <repo>/manifests
+kubectl create -f trident-application.yaml
 ```
 To check the `Application` was created successfully run the following command:
 ```shell
@@ -218,7 +227,8 @@ spec:
 ```
 Run the following to create the `Backup`:
 ```shell
-kubectl create -f ../manifests/trident-backup.yaml
+cd <repo>/manifests
+kubectl create -f trident-backup.yaml
 ```
 To check if the `Backup` was created successfully run the following command:
 ```shell
@@ -305,7 +315,8 @@ spec:
 
 Run the following to create the `BackupRestore`:
 ```shell
-kubectl create -f ../manifests/trident-protect-backup-restore.yaml
+cd <repo>/manifests
+kubectl create -f trident-protect-backup-restore.yaml
 ```
 To check if the `BackupRestore` was created successfully run the following command:
 ```shell
@@ -332,7 +343,7 @@ If everything was successful, you should get the UI that looks like this:
 ### 3. Migrate between storage services
 On this step, we'll migrate parts of our sample application stateful services from one storage service to another. We'll do that using the `storageClassMapping` feature of the Trident Protect `BackupRestore`. 
 
-We'll migrate the catalog service MySQL database from an EBS volume to an FSx for ONTAP block volume. 
+We'll migrate the catalog service MySQL database from an EBS volume to an FSx for ONTAP volume using iSCSI presented LUNs. 
 
 To do that, we'll execute two `BackupRestore` resources - one will recover all sample-application resources and data except for the `catalog-mysql` statefulset, and the other will recover and migrate the `catalog-mysql` statefulset from EBS to FSx for ONTAP block storage. 
 Review the [trident-protect-migrate.yaml](./manifests/trident-protect-migrate.yaml). Notice we're using `resourceFilter` to exclude and include resources from the recovery process and `storageClassMapping` to migrate stateful resources to different storage backends. 
@@ -363,7 +374,8 @@ data-catalog-mysql-0   Bound    pvc-0d795501-aca2-4e10-98b5-111ecc3aef2c   30Gi 
 
 Run the following to create the `BackupRestore` resources required for the migration:
 ```shell
-kubectl create -f ../manifests/trident-protect-migrate.yaml
+cd <repo>/manifests
+kubectl create -f trident-protect-migrate.yaml
 ```
 To check if the `BackupRestore` resources were created successfully run the following command:
 
