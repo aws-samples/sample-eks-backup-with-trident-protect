@@ -25,24 +25,23 @@ resource "helm_release" "lb" {
     aws_eks_pod_identity_association.aws-lb-pod-identity-association
   ]
 
-  set {
+  set = [
+    {
     name  = "serviceAccount.create"
     value = "true"
-  }
-
-  set {
+    },
+{
     name  = "serviceAccount.name"
     value = "aws-load-balancer-controller"
-  }
-
-  set {
+    },
+    {
     name  = "clusterName"
     value = module.eks.cluster_name
-  }
-
-  set {
+    },
+    {
     name  = "disableRestrictedSecurityGroupRules"
     value = "true"
-  }
+    }
+  ]
 }
 
