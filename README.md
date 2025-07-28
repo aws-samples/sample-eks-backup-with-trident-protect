@@ -79,20 +79,13 @@ Run the commands below to install the Trident Protect:
 > Make sure you change clusterName to the EKS cluster name in your environment
 ```shell
 helm repo add netapp-trident-protect https://netapp.github.io/trident-protect-helm-chart
-helm install trident-protect-crds netapp-trident-protect/trident-protect-crds --namespace trident-protect --create-namespace
-helm install trident-protect netapp-trident-protect/trident-protect --version 100.2502.0 --set clusterName=eks-protect-8DKLpwTi --namespace trident-protect
+helm install trident-protect netapp-trident-protect/trident-protect --set clusterName=eks-protect-ymd8hvHr --version 100.2506.0 --create-namespace --namespace trident-protect
 ```
 Expected output:
 ```shell
 "netapp-trident-protect" has been added to your repositories
-NAME: trident-protect-crds
-LAST DEPLOYED: Tue Mar 11 15:57:42 2025
-NAMESPACE: trident-protect
-STATUS: deployed
-REVISION: 1
-TEST SUITE: None
 NAME: trident-protect
-LAST DEPLOYED: Tue Mar 11 16:01:09 2025
+LAST DEPLOYED: Tue Jul 22 19:44:30 2025
 NAMESPACE: trident-protect
 STATUS: deployed
 REVISION: 1
@@ -104,16 +97,16 @@ If you have an existing S3 bucket, you can use it. If not, used the following st
 aws s3 mb s3://<bucket_name> --region <aws_region>
 ```
 
-### 4. Create EKS Secret to store user credentials
-Create a secret to store the trident protect user AWS accessKey and secretKey. You need to ensure that the user credentials you provide have the necessary permissions to access the bucket, see example [Amazon S3 policy statement](https://docs.netapp.com/us-en/trident/trident-protect/trident-protect-appvault-custom-resources.html#s3-compatible-storage-iam-permissions).
-
-Use the following example to create the secret:
-```shell
-kubectl create secret generic <secret-name> \
---from-literal=accessKeyID=<accessKey> \
---from-literal=secretAccessKey=<seceretKey> \
--n trident-protect
-```
+> [!NOTE]
+> 4. Create EKS Secret to store user credentials - Optional
+If you don't want to use EKS Pod Identity for IAM authentication than create a secret to store the trident protect user AWS accessKey and secretKey. You need to ensure that the user credentials you provide have the necessary permissions to access the bucket, see example [Amazon S3 policy statement](https://docs.netapp.com/us-en/trident/trident-protect/trident-protect-appvault-custom-resources.html#s3-compatible-storage-iam-permissions).
+> Use the following example to create the secret:
+>```shell
+>kubectl create secret generic <secret-name> \
+>--from-literal=accessKeyID=<accessKey> \
+>--from-literal=secretAccessKey=<seceretKey> \
+>-n trident-protect
+>```
 
 ### 5. Create Trident Protect AppVault
 Next, we'll create the Trident Protect `AppVault`. The `AppVault` points to the S3 bucket where both snapshots and backup content, data and metadata is store. The `AppVault` will be created in the dedicated `trident-protect` backup namespace created in step 2 and can be secured with [role-based access control (RBAC)](https://docs.netapp.com/us-en/trident/trident-protect/manage-authorization-access-control.html) to restrict access to privileged objects to administrators. 
@@ -128,9 +121,13 @@ cd <repo>/manifests
 Update the following parameters:
 - `providerConfig.s3.bucketName`: the S3 bucket name
 - `providerConfig.s3.endpoint`: the S3 endpoint if the bucket is not in the `us-east-1` region 
+- `useIAM`: Use EKS Pod Identity for IAM authentication
 - `providerCredentials.accessKeyID.name`: the EKS secret name from the previous step
 - `providerCredentials.secretAccessKey.name`: the EKS secret name from the previous step
+> [!IMPORTANT]
+> When using useIAM: true with EKS Pod Identity don't set `providerCredentials.accessKeyID.name` and `providerCredentials.secretAccessKey.name`
 ```yaml
+
 ---
 apiVersion: protect.trident.netapp.io/v1
 kind: AppVault
@@ -143,17 +140,18 @@ spec:
   providerType: AWS
   providerConfig:
     s3:
-      bucketName: trident-protect-src-bucket
+      bucketName: trident-protect-blog
       endpoint: s3.amazonaws.com
-  providerCredentials:
-    accessKeyID:
-      valueFromSecret:
-        key: accessKeyID
-        name: s3-secret
-    secretAccessKey:
-      valueFromSecret:
-        key: secretAccessKey
-        name: s3-secret
+      useIAM: true
+  # providerCredentials:
+  #   accessKeyID:
+  #     valueFromSecret:
+  #       key: accessKeyID
+  #       name: s3-secret
+  #   secretAccessKey:
+  #     valueFromSecret:
+  #       key: secretAccessKey
+  #       name: s3-secret
 ```
 Run the following command to create the `AppVault`:
 ```shell

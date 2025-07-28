@@ -7,16 +7,17 @@ spec:
   providerType: AWS
   providerConfig:
     s3:
-      bucketName: trident-protect-aws-blog
+      bucketName: trident-protect-blog
       endpoint: s3.us-east-1.amazonaws.com
-  providerCredentials:
-    accessKeyID:
-      valueFromSecret:
-        key: accessKeyID
-        name: s3-secret
-    secretAccessKey:
-      valueFromSecret:
-        key: secretAccessKey
-        name: s3-secret
+      useIAM: true
+  # providerCredentials:
+  #   accessKeyID:
+  #     valueFromSecret:
+  #       key: accessKeyID
+  #       name: s3-secret
+  #   secretAccessKey:
+  #     valueFromSecret:
+  #       key: secretAccessKey
+  #       name: s3-secret
 
 

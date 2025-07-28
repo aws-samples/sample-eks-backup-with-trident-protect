@@ -1,25 +1,16 @@
 
-resource "helm_release" "trident" {
-  provider         = helm.cluster1
-  name             = "trident-operator"
-  namespace        = "trident"
-  create_namespace = true
-  description      = null
-  chart            = "trident-operator"
-  version          = "100.2502.0"
-  repository       = "https://netapp.github.io/trident-helm-chart"
-  values           = [file("${path.module}/values.yaml")]
-
-  set {
-    name  = "nodePrep"
-    value = "{iscsi}"
-  }
+resource "aws_eks_addon" "fsxn_csi_addon" {
+  cluster_name                = module.eks.cluster_name
+  addon_name                  = "netapp_trident-operator"
+  addon_version               = "v25.6.0-eksbuild.1"
+  resolve_conflicts_on_create = "OVERWRITE"
 
   depends_on = [module.eks]
+
 }
 
 resource "time_sleep" "wait_30_seconds" {
-  depends_on = [helm_release.trident]
+  depends_on = [aws_eks_addon.fsxn_csi_addon]
 
   create_duration  = "30s"
   destroy_duration = "60s"
@@ -63,7 +54,7 @@ resource "kubectl_manifest" "trident_storage_class_san" {
 
 resource "kubectl_manifest" "trident_snapshot_class" {
   provider   = kubectl.cluster1
-  depends_on = [helm_release.trident]
+  depends_on = [aws_eks_addon.fsxn_csi_addon]
   yaml_body  = file("${path.module}/../manifests/fsxn-volume-snapshot-class.yaml")
 }
 
@@ -156,7 +147,7 @@ resource "kubectl_manifest" "sample_app_tenant0" {
   provider           = kubectl.cluster1
   override_namespace = "tenant0"
   wait               = true
-  depends_on         = [kubernetes_secret_v1.catalog-db,kubernetes_secret_v1.orders-db, kubectl_manifest.trident_storage_class_nas, kubernetes_namespace_v1.tenant0, helm_release.trident, kubectl_manifest.ebs_storage_class]
+  depends_on         = [kubernetes_secret_v1.catalog-db,kubernetes_secret_v1.orders-db, kubectl_manifest.trident_storage_class_nas, kubernetes_namespace_v1.tenant0, aws_eks_addon.fsxn_csi_addon, kubectl_manifest.ebs_storage_class]
   for_each           = toset(data.kubectl_path_documents.sample_app_tenant0.documents)
   yaml_body          = each.value
 }
