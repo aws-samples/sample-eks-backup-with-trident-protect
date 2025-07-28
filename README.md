@@ -99,7 +99,7 @@ aws s3 mb s3://<bucket_name> --region <aws_region>
 
 > [!NOTE]
 > 4. Create EKS Secret to store user credentials - Optional
-EKS Pod Identity is the recommended method for IAM authentication, which has been configured as part of the initial terraform deployments. If you don't want to use EKS Pod Identity for IAM authentication then create a secret to store the trident protect user AWS accessKey and secretKey. Make sure that the user credentials you provide have the necessary permissions to access the S3 bucket—-go to the example [Amazon S3 policy statement](https://docs.netapp.com/us-en/trident/trident-protect/trident-protect-appvault-custom-resources.html#s3-compatible-storage-iam-permissions).
+> EKS Pod Identity is the recommended method for IAM authentication, which has been configured as part of the initial terraform deployments. If you don't want to use EKS Pod Identity for IAM authentication then create a secret to store the trident protect user AWS accessKey and secretKey. Make sure that the user credentials you provide have the necessary permissions to access the S3 bucket—go to the example [Amazon S3 policy statement](https://docs.netapp.com/us-en/trident/trident-protect/trident-protect-appvault-custom-resources.html#s3-compatible-storage-iam-permissions).
 > Use the following example to create the secret:
 >```shell
 >kubectl create secret generic <secret-name> \
