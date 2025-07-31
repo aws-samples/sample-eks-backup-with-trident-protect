@@ -8,7 +8,7 @@ spec:
   providerConfig:
     s3:
       bucketName: trident-protect-blog
-      endpoint: s3.us-east-1.amazonaws.com
+      endpoint: s3.amazonaws.com
       useIAM: true
   # providerCredentials:
   #   accessKeyID:
